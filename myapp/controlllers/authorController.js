@@ -4,7 +4,7 @@ const blogmodel = require('../models/blogPostModel');
 const usermodel = require('../models/userModel');
 const BlogController = require('../controlllers/blogController');
 const Sequelize = require('../config/db');
-
+// 
 authormodel = require('../models/autherModel');
 
 class authorController {

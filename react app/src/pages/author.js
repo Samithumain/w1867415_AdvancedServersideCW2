@@ -225,3 +225,4 @@ const data = await response.json();
 };
 
 export default AuthorProfile;
+// 

@@ -14,3 +14,4 @@ router.delete('/follow',verifyToken, authorcontroller.unfollowAuthor)
 
 
 module.exports = router;
+// 

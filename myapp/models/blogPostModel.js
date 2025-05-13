@@ -81,3 +81,4 @@ BlogPost.associate = (models) => {
 
 
 module.exports = BlogPost;
+// 

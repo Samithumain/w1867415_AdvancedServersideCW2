@@ -367,3 +367,4 @@ class = "search-input"
 };
 
 export default ViewBlog;
+// 
