@@ -142,7 +142,7 @@
 .filter-section {
   display: flex;
   gap: 1rem;
-  justify-content: center;   /* horizontally centers the children */
+  justify-content: center;  
 
   margin-bottom: 1.5rem;
 }

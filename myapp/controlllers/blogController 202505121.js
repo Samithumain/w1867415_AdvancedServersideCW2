@@ -2,7 +2,7 @@ const blogmodel = require('../models/blogPostModel');
 const usermodel = require('../models/userModel'); 
 const jwt = require('jsonwebtoken');
 const Sequelize = require('../config/db');
-const upload = require('../middlewares/multer'); // import multer middleware
+const upload = require('../middlewares/multer'); 
   const { Op } = require('sequelize');
 
 class BlogController {
