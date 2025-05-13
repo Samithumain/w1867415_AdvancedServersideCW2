@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import {  useEffect } from 'react';
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -37,8 +38,8 @@ function Login() {
 
       if (response.ok) {
         console.log('Login successful:', data);
-        login(data.token, data.user); 
-
+        login(data.token, data.user);
+        navigate('/browse'); 
       } else {
         setError(data.message || 'Login failed. Please check your credentials.');
       }
@@ -84,4 +85,22 @@ function Login() {
   );
 }
 
-export default Login;
+
+function Logout() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  return (
+    <button onClick={handleLogout} className="logout-button">
+      Logout
+    </button>
+  );
+}
+
+
+export { Login, Logout };

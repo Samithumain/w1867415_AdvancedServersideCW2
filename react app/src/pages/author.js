@@ -1,19 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 
 const AuthorProfile = () => {
   const { user } = useAuth();
-  const { authorId } = useParams();
+  const { authorId,username } = useParams();
+  const navigate = useNavigate();
+
   const [author, setAuthor] = useState(null);
-  const [blogs, setBlogs] = useState({ 
-    mostRecent: [], 
-    mostPopular: [], 
-    mostLiked: [] 
-  });
-  const [isFollowing, setIsFollowing] = useState(0); 
+  const [blogs, setBlogs] = useState({ mostRecent: [], mostPopular: [], mostLiked: [] });
+  const [isFollowing, setIsFollowing] = useState(0);
   const [loading, setLoading] = useState(true);
+
   const [filters, setFilters] = useState({
     postCount: 5,
     sortBy: 'recent'
@@ -23,7 +22,6 @@ const AuthorProfile = () => {
     const fetchAuthorData = async () => {
       try {
         setLoading(true);
-        
         const response = await fetch(
           `http://localhost:5000/api/author/fetch?authorID=${authorId}&email=${encodeURIComponent(user.email)}`,
           {
@@ -33,16 +31,17 @@ const AuthorProfile = () => {
             }
           }
         );
-        
+
         const result = await response.json();
-        window.alert(result.mostLiked)
-        setAuthor(result.author);
+        setAuthor(username);
         setBlogs({
           mostRecent: result.mostRecent || [],
           mostPopular: result.mostPopular || [],
           mostLiked: result.mostLiked || []
+          
         });
         setIsFollowing(result.isFollowing);
+        // window.alert(result.isFollowing ? "Following" : "Not Following"+"   "+  isFollowing);
       } catch (error) {
         console.error('Error loading author data:', error);
       } finally {
@@ -56,12 +55,12 @@ const AuthorProfile = () => {
   const handleFollowToggle = async () => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/author/follow?email=${encodeURIComponent(user.email)}`, 
+        `http://localhost:5000/api/author/follow?email=${encodeURIComponent(user.email)}`,
         {
           method: isFollowing ? 'DELETE' : 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user.token}`
+            'authorization': `Bearer ${user.token}`
           },
           body: JSON.stringify({
             followerId: user.id,
@@ -71,7 +70,9 @@ const AuthorProfile = () => {
       );
 
       if (response.ok) {
-        setIsFollowing(prev => prev ? 0 : 1); 
+
+        setIsFollowing(prev => prev ? 0 : 1);
+        // window.alert(isFollowing ? "Unfollowed" : "Followed");
       }
     } catch (error) {
       console.error('Error updating follow status:', error);
@@ -79,46 +80,66 @@ const AuthorProfile = () => {
   };
 
   const handleReaction = async (blogId, reaction) => {
-    try {
-      const response = await fetch(
-        `http://localhost:5000/api/blog/reaction?blogId=${blogId}&reaction=${reaction}`, 
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user.token}`
-          },
-          body: JSON.stringify({
-            email: user.email,
-          }),
-        }
-      );
+    let isliked = 0;
+    // window.alert(reaction)
+    if (reaction === 'like') {
+      isliked = 1;
+    }
+    else {
+      isliked = 2;
+    }
 
-      if (response.ok) {
-        setBlogs(prevBlogs => {
-          const updatedBlogs = { ...prevBlogs };
-          
-          ['mostRecent', 'mostPopular', 'mostLiked'].forEach(category => {
-            updatedBlogs[category] = updatedBlogs[category].map(blog => {
-              if (blog.id === blogId) {
-                return {
-                  ...blog,
-                  userReaction: reaction,
-                  likes: reaction === 'like' ? blog.likes + 1 : blog.likes,
-                  dislikes: reaction === 'dislike' ? blog.dislikes + 1 : blog.dislikes,
-                };
-              }
-              return blog;
-            });
-          });
-          
-          return updatedBlogs;
+    if (!user) return;
+    try {
+      const response = await fetch(`http://localhost:5000/api/blog/reaction?blogId=${blogId}&reaction=${reaction}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          email: user.email,
+        }),
+      });
+const data = await response.json();
+ if (data.reactionadded == 0){
+  isliked = 0 
+  // window.alert(isliked)
+ }
+      setBlogs((prevBlogs) => {
+        const updatedBlogs = { ...prevBlogs };
+      
+        const listKey = 
+          filters.sortBy === 'recent' ? 'mostRecent' :
+          filters.sortBy === 'popular' ? 'mostPopular' :
+          'mostLiked';
+      
+        updatedBlogs[listKey] = updatedBlogs[listKey].map(blog => {
+          if (blog.id === blogId) {
+          //  window.alert(data.likes)
+          //  window.alert(data.dislikes)      
+          //  window.alert(blog.dislikes.length + 1)
+          //  window.alert(blog.dislikes.length)
+            return {
+              
+              ...blog,
+              userReaction: reaction,
+            likes:data.likes,
+              dislikes: data.dislikes,
+              likestatus:isliked,
+            };
+          }
+          return blog;
         });
-      }
+      
+        return updatedBlogs;
+      });
     } catch (error) {
       console.error(`Error ${reaction} blog:`, error);
     }
   };
+
+
 
   if (loading) return <div>Loading author profile...</div>;
   if (!author) return <div>Author not found</div>;
@@ -132,10 +153,10 @@ const AuthorProfile = () => {
   ];
 
   return (
-    <div className="author-profile">
+    <div className="blog-container">
       <div className="author-header">
-        <h1>{author.username}</h1>
-        <button 
+        <h1>{author}</h1>
+        <button
           onClick={handleFollowToggle}
           className={`follow-btn ${isFollowing ? 'following' : ''}`}
         >
@@ -146,7 +167,7 @@ const AuthorProfile = () => {
       <div className="filter-section">
         <select
           value={filters.postCount}
-          onChange={(e) => setFilters({...filters, postCount: Number(e.target.value)})}
+          onChange={(e) => setFilters({ ...filters, postCount: Number(e.target.value) })}
         >
           {[3, 5, 10, 15, 20].map(num => (
             <option key={num} value={num}>Show {num} posts</option>
@@ -155,11 +176,11 @@ const AuthorProfile = () => {
 
         <select
           value={filters.sortBy}
-          onChange={(e) => setFilters({...filters, sortBy: e.target.value})}
+          onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
         >
           <option value="recent">Most Recent</option>
           <option value="popular">Most Popular</option>
-          <option value="most_liked">Most Liked</option>
+          <option value="mostLiked">Most Liked</option>
         </select>
       </div>
 
@@ -175,19 +196,24 @@ const AuthorProfile = () => {
                 <span>🗓 {format(new Date(blog.visit_date), 'MMMM yyyy')}</span>
               </div>
               <p>{blog.content.substring(0, 200)}...</p>
-              
               <div className="reaction-buttons">
                 <button
                   onClick={() => handleReaction(blog.id, 'like')}
-                  className={blog.userReaction === 'like' ? 'active' : ''}
+                        className={`${
+                blog.userReaction === 'like' ? 'active' : ''
+              } ${blog.likestatus === 1 ? 'disabled' : ''}`}
                 >
-                  👍 {blog.likes || 0}
+                  👍 {blog.likes.length || 0}
                 </button>
                 <button
                   onClick={() => handleReaction(blog.id, 'dislike')}
-                  className={blog.userReaction === 'dislike' ? 'active' : ''}
+                            
+                              className={`${
+                blog.userReaction === 'dislike' ? 'active' : ''
+              } ${blog.likestatus === 2 ? 'disabled' : ''}`}
+
                 >
-                  👎 {blog.dislikes || 0}
+                  👎 {blog.dislikes.length || 0}
                 </button>
               </div>
             </div>

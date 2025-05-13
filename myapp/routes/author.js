@@ -8,9 +8,9 @@ router.get('/fetch',verifyToken, authorcontroller.fetchUserBlogs)
 // router.post('/follow',verifyToken, authorcontroller.searchBlogs)
 // router.delete('/follow',verifyToken, authorcontroller.searchBlogs)
 
-router.get('/country',verifyToken, BlogController.fetchBlogsByCountry)
+router.post('/follow',verifyToken, authorcontroller.followAuthor)
 // router.get('/fetch',verifyToken, BlogController.fetchAllBlogs)
-router.post('/reaction',verifyToken, BlogController.handleReaction)
+router.delete('/follow',verifyToken, authorcontroller.unfollowAuthor)
 
 
 module.exports = router;

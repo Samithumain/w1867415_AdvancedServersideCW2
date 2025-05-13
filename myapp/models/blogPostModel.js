@@ -40,16 +40,37 @@ const BlogPost = sequelize.define('BlogPost', {
       key: 'id'
     }
   },
+  
   likes: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0,  
-    allowNull: false
+  type: DataTypes.TEXT, 
+  defaultValue: '[]',
+  get() {
+    const raw = this.getDataValue('likes');
+    return raw ? JSON.parse(raw) : [];
   },
-  dislikes: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0,  
-    allowNull: false
+  set(value) {
+    this.setDataValue('likes', JSON.stringify(value));
   }
+},
+
+dislikes: {
+  type: DataTypes.TEXT,
+  defaultValue: '[]',
+  get() {
+    const raw = this.getDataValue('dislikes');
+    return raw ? JSON.parse(raw) : [];
+  },
+  set(value) {
+    this.setDataValue('dislikes', JSON.stringify(value));
+  }
+},
+
+ image: { 
+    type: DataTypes.STRING,
+    allowNull: true,
+  }
+
+
 }, {
   timestamps: true
 });
@@ -58,12 +79,5 @@ BlogPost.associate = (models) => {
   BlogPost.belongsTo(models.User, { foreignKey: 'author_id', as: 'author' });
 };
 
-// sequelize.sync({ force: true })  // This will drop and recreate the tables
-//   .then(() => {
-//     console.log('Database synced successfully!');
-//   })
-//   .catch((error) => {
-//     console.error('Error syncing database:', error);
-//   });
 
 module.exports = BlogPost;

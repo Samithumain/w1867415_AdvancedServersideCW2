@@ -9,8 +9,5 @@ router.post('/login', UserController.login);
 
 
 
-// router.post('/generate-api-key', verifyToken, apiKeyController.generateApiKey);
-// router.post('/validateAdmin', verifyToken, UserController.adminvalidate);
-
 
 module.exports = router;

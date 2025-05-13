@@ -12,30 +12,37 @@ const AddBlog = () => {
     userId: user.id
   });
 
+  const [imageFile, setImageFile] = useState(null);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleImageChange = (e) => {
+    setImageFile(e.target.files[0]);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const form = new FormData();
+    form.append('title', formData.title);
+    form.append('content', formData.content);
+    form.append('country', formData.country);
+    form.append('visit_date', formData.dateOfVisit);
+    form.append('author_id', formData.userId);
+    form.append('email', user.email);
+    if (imageFile) {
+      form.append('image', imageFile);
+    }
 
     try {
-      const response = await fetch('http://localhost:5000/api/blog/add', {
+      const response = await fetch(`http://localhost:5000/api/blog/add?email=${encodeURIComponent(user.email)}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        'Authorization': `Bearer ${user.token}` 
-
+          authorization: `Bearer ${user.token}`,
         },
-        body: JSON.stringify({
-          title: formData.title,
-          content: formData.content,
-          country: formData.country,
-          visit_date: formData.dateOfVisit,
-          author_id: formData.userId,
-          email: user.email 
-        })
+        body: form,
       });
 
       if (!response.ok) {
@@ -48,69 +55,76 @@ const AddBlog = () => {
       alert('Error adding blog post.');
     }
   };
+return (
+  <div className="form-container">
+    <form onSubmit={handleSubmit} className="form-box">
+      <h2 className="form-title">Add Blog Post</h2>
 
-  return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto p-6 bg-white rounded-2xl shadow-md space-y-4">
-      <h2 className="text-2xl font-bold text-center mb-4">Add Blog Post</h2>
-  
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
+      <div className="form-group">
+        <label htmlFor="title" className="form-label">Title</label>
         <input
           type="text"
           name="title"
           id="title"
           onChange={handleChange}
           required
-          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:border-blue-500"
+          className="form-input"
         />
       </div>
-  
-      <div>
-        <label htmlFor="content" className="block text-sm font-medium text-gray-700">Content</label>
+
+      <div className="form-group">
+        <label htmlFor="content" className="form-label">Content</label>
         <textarea
           name="content"
           id="content"
           onChange={handleChange}
           required
           rows="4"
-          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:border-blue-500"
+          className="form-textarea"
         />
       </div>
-  
-      <div>
-        <label htmlFor="country" className="block text-sm font-medium text-gray-700">Country</label>
+
+      <div className="form-group">
+        <label htmlFor="country" className="form-label">Country</label>
         <input
           type="text"
           name="country"
           id="country"
           onChange={handleChange}
           required
-          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:border-blue-500"
+          className="form-input"
         />
       </div>
-  
-      <div>
-        <label htmlFor="dateOfVisit" className="block text-sm font-medium text-gray-700">Date of Visit</label>
+
+      <div className="form-group">
+        <label htmlFor="dateOfVisit" className="form-label">Date of Visit</label>
         <input
           type="date"
           name="dateOfVisit"
           id="dateOfVisit"
           onChange={handleChange}
           required
-          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:border-blue-500"
+          className="form-input"
         />
       </div>
-  
-  
-      <button
-        type="submit"
-        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
-      >
-        Add Blog Post
-      </button>
+
+      <div className="form-group">
+        <label htmlFor="image" className="form-label">Add Picture</label>
+        <input
+          type="file"
+          name="image"
+          id="image"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="form-input-file"
+        />
+      </div>
+
+      <button type="submit" className="form-button">Add Blog Post</button>
     </form>
-  );
-  
+  </div>
+);
+
 };
 
 export default AddBlog;

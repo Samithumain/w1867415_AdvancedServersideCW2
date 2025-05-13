@@ -1,97 +1,156 @@
 const blogmodel = require('../models/blogPostModel');
 const usermodel = require('../models/userModel'); 
+const jwt = require('jsonwebtoken');
+const Sequelize = require('../config/db');
+const upload = require('../middlewares/multer'); 
+  const { Op } = require('sequelize');
 
 class BlogController {
+  static requesterId = 0  
+
+
   static async add(req, res) {
-    const { title, content, country, visit_date, author_id } = req.body;
+  const { title, content, country, visit_date, author_id } = req.body;
+  const imageFile = req.file; 
 
-    if (!title || !content || !country || !visit_date || !author_id) {
-      return res.status(400).json({ error: 'All fields are required.' });
-    }
-
-    try {
-      const newPost = await blogmodel.create({
-        title,
-        content,
-        country,
-        visit_date,
-        author_id
-      });
-
-      const user = await BlogController.getUser(newPost.author_id); // Get the author user details
-      newPost.author_username = user.username;
-
-      res.status(201).json({ message: 'Blog post created.', blog: newPost });
-    } catch (error) {
-      console.error('Error creating blog post:', error);
-      res.status(500).json({ error: 'Server error while creating blog post.' });
-    }
+  if (!title || !content || !country || !visit_date || !author_id) {
+    return res.status(400).json({ error: 'All fields are required.' });
   }
 
-  static async searchBlogs(req, res) {
-    const { search, limit = 10 } = req.query;
-    const safeLimit = Math.min(parseInt(limit), 20);
-    const searchQuery = search || '';
+  try {
+    let imagePath = '';
+    if (imageFile) {
+      imagePath = `/uploads/blog_images/${imageFile.filename}`;
+    }
 
-    try {
-      const baseQuery = {
+    const newPost = await blogmodel.create({
+      title,
+      content,
+      country,
+      visit_date,
+      author_id,
+      image: imagePath 
+    });
+
+    const user = await BlogController.getUser(newPost.author_id);
+    newPost.author_username = user.username;
+
+    res.status(201).json({ message: 'Blog post created.', blog: newPost });
+  } catch (error) {
+    console.error('Error creating blog post:', error);
+    res.status(500).json({error, error: 'Server error while creating blog post.' });
+  }
+}
+
+static async searchBlogs(req, res) {
+  let token = req.headers['authorization']?.split(' ')[1];
+  
+
+  BlogController.requesterId = req.user.userId;
+
+  const { search, limit = 10 } = req.query;
+  const parsedLimit = parseInt(limit);
+  const safeLimit = Math.min(isNaN(parsedLimit) ? 10 : parsedLimit, 20);
+  const searchQuery = search || '';
+
+  try {
+    let userIds = [];
+    if (search) { 
+      const users = await usermodel.findAll({
         where: {
-          title: {
-            [require('sequelize').Op.iLike]: `%${searchQuery}%`
+          username: {
+            [Op.like]: `%${search}%`
           }
-        },
-        limit: safeLimit
-      };
-
-      var mostRecent = await blogmodel.findAll({
-        ...baseQuery,
-        order: [['createdAt', 'DESC']]
+        }
       });
-
-      // Get user details and add to each blog's data
-      mostRecent = await BlogController.addUsernamesToBlogs(mostRecent);
-
-      var mostLiked = await blogmodel.findAll({
-        ...baseQuery,
-        order: [['likes', 'DESC']]
-      });
-
-      // Get user details and add to each blog's data
-      mostLiked = await BlogController.addUsernamesToBlogs(mostLiked);
-
-      const recencyThreshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-      const potentialPopular = await blogmodel.findAll({
-        where: {
-          ...baseQuery.where,
-          createdAt: { [require('sequelize').Op.gte]: recencyThreshold }
-        },
-        order: [['likes', 'DESC']],
-        limit: 100
-      });
-
-      var mostPopular = potentialPopular
-        .map(blog => ({
-          ...blog.toJSON(),
-          popularityScore: BlogController.calculatePopularity(blog)
-        }))
-        .sort((a, b) => b.popularityScore - a.popularityScore)
-        .slice(0, safeLimit);
-
-      // Get user details and add to each blog's data
-      mostPopular = await BlogController.addUsernamesToBlogs(mostPopular);
-
-      res.status(200).json({ mostRecent, mostLiked, mostPopular });
-
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: 'Error searching blogs' });
+      userIds = users.map(user => user.id);
     }
+    console.log("userIds", userIds, "username", search, userIds.length);
+
+
+    const baseQuery = {
+      limit: safeLimit,
+      where: {}
+    };
+
+    const orConditions = [];
+    if (searchQuery) {
+      orConditions.push({ title: { [Op.like]: `%${searchQuery}%` } });
+    }
+    if (userIds.length > 0) {
+      orConditions.push({ author_id: { [Op.in]: userIds } });
+    }
+
+    if (orConditions.length > 0) {
+      baseQuery.where[Op.or] = orConditions;
+    }
+    if (orConditions.length === 0){
+        delete baseQuery.where[Op.or];
+    }
+
+
+    let mostRecent = await blogmodel.findAll({
+      ...baseQuery,
+      order: [['visit_date', 'DESC']]
+    });
+    mostRecent = await BlogController.addUsernamesToBlogs(mostRecent);
+
+    let mostLiked = await blogmodel.findAll({
+      ...baseQuery,
+        order: [[Sequelize.literal('json_array_length(likes)'), 'DESC']]
+    });
+    mostLiked = await BlogController.addUsernamesToBlogs(mostLiked);
+
+    const recencyThreshold = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    let potentialPopular = await blogmodel.findAll({
+      ...baseQuery,
+      where: {
+        ...baseQuery.where, 
+        visit_date: { [Op.gte]: recencyThreshold }
+      },
+        order: [[Sequelize.literal('json_array_length(likes)'), 'DESC']],
+      limit: 100
+    });
+
+
+    let mostPopular = potentialPopular
+      .map(blog => ({
+        ...blog.toJSON(),
+        popularityScore: BlogController.calculatePopularity(blog)
+      }))
+      .sort((a, b) => b.popularityScore - a.popularityScore)
+      .slice(0, safeLimit);
+
+    mostPopular = await BlogController.addUsernamesToBlogs(mostPopular);
+
+    return res.status(200).json({ mostRecent, mostLiked, mostPopular });
+
+  } catch (err) {
+    console.error('Full searchBlogs error:', err);
+    return res.status(500).json({ message: 'Error searching blogs' });
   }
+}
+
+
 
   static async fetchBlogsByCountry(req, res) {
+
+//  let token = req.headers['authorization']?.split(' ')[1];
+//           if (!token) return res.status(401).json({ message: 'Authorization token missing' });
+      
+//           let decoded;
+//           try {
+//             decoded = jwt.verify(token, 'jwt'); 
+//           } catch (err) {
+//             return res.status(401).json({ message: 'Invalid token' });
+//           }
+      
+          BlogController.requesterId = req.user.userId;
+      
+
     const { country, limit = 10 } = req.query;
     const safeLimit = Math.min(parseInt(limit), 20);
+    const countrydata = await BlogController.getcountrydata(country)
 
     try {
       const baseQuery = {
@@ -101,28 +160,26 @@ class BlogController {
 
       var mostRecent = await blogmodel.findAll({
         ...baseQuery,
-        order: [['createdAt', 'DESC']]
+        order: [['visit_date', 'DESC']]
       });
 
-      // Get user details and add to each blog's data
       mostRecent = await BlogController.addUsernamesToBlogs(mostRecent);
 
       var mostLiked = await blogmodel.findAll({
         ...baseQuery,
-        order: [['likes', 'DESC']]
+        order: [[Sequelize.literal('json_array_length(likes)'), 'DESC']]
       });
 
-      // Get user details and add to each blog's data
       mostLiked = await BlogController.addUsernamesToBlogs(mostLiked);
 
-      const recencyThreshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const recencyThreshold = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
       const potentialPopular = await blogmodel.findAll({
         where: {
           country,
-          createdAt: { [require('sequelize').Op.gte]: recencyThreshold }
+          visit_date: { [require('sequelize').Op.gte]: recencyThreshold }
         },
-        order: [['likes', 'DESC']],
+        order: [[Sequelize.literal('json_array_length(likes)'), 'DESC']],
         limit: 100
       });
 
@@ -134,10 +191,9 @@ class BlogController {
         .sort((a, b) => b.popularityScore - a.popularityScore)
         .slice(0, safeLimit);
 
-      // Get user details and add to each blog's data
       mostPopular = await BlogController.addUsernamesToBlogs(mostPopular);
 
-      res.status(200).json({ mostRecent, mostLiked, mostPopular });
+      res.status(200).json({ mostRecent, mostLiked, mostPopular,countrydata });
 
     } catch (err) {
       console.error(err);
@@ -146,30 +202,42 @@ class BlogController {
   }
 
   static async fetchAllBlogs(req, res) {
+
+//  let token = req.headers['authorization']?.split(' ')[1];
+//           if (!token) return res.status(401).json({ message: 'Authorization token missing' });
+      
+//           let decoded;
+//           try {
+//             decoded = jwt.verify(token, 'jwt'); 
+//           } catch (err) {
+//             return res.status(401).json({ message: 'Invalid token' });
+//           }
+      
+          BlogController.requesterId = req.user.userId;
+      
+
     const { limit = 10 } = req.query;
     const safeLimit = Math.min(parseInt(limit), 20);
   
     try {
-      // Fetch all data first
       const mostRecent = await blogmodel.findAll({
-        order: [['createdAt', 'DESC']],
+        order: [['visit_date', 'DESC']],
         limit: safeLimit
       });
   
       const mostLiked = await blogmodel.findAll({
-        order: [['likes', 'DESC']],
+        order: [[Sequelize.literal('json_array_length(likes)'), 'DESC']],
         limit: safeLimit
       });
   
       const potentialPopular = await blogmodel.findAll({
         where: {
-          createdAt: { [require('sequelize').Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+          visit_date: { [require('sequelize').Op.gte]: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) }
         },
-        order: [['likes', 'DESC']],
+        order: [[Sequelize.literal('json_array_length(likes)'), 'DESC']],
         limit: 100
       });
   
-      // Convert to plain objects and add usernames
       const processedRecent = await BlogController.addUsernamesToBlogs(mostRecent);
       const processedLiked = await BlogController.addUsernamesToBlogs(mostLiked);
       const processedPopular = await BlogController.addUsernamesToBlogs(
@@ -182,7 +250,6 @@ class BlogController {
           .slice(0, safeLimit)
       );
   
-      // Debug check
       console.log("First Recent username:", processedRecent[0]?.author_username);
       console.log("First Liked username:", processedLiked[0]?.author_username);
       console.log("First Popular username:", processedPopular[0]?.author_username);
@@ -198,7 +265,41 @@ class BlogController {
       res.status(500).json({ message: 'Error fetching blogs' });
     }
   }
-  
+
+static async getcountrydata(country) {
+  console.log("country",country);
+  let countrydata = "";
+    try {
+
+      const response = await fetch(`http://my_microservice:4000/api/countriesMicro?country=${country}`, {
+        method: 'GET',
+        headers: {
+          // put env
+          // 'authorization': `Bearer ${token}`,
+          'authorization': process.env.MicroKey,
+          
+        },
+      });
+      const data = await response.json();
+      console.log("data",data);
+  if (data && data.length > 0) {
+        countrydata = (data[0]);
+      } 
+      else if (data.error) {
+        console.log("error",data.error);
+                countrydata = "";
+
+      }
+      else{
+                countrydata = "";
+      }
+    } catch (error) {
+      console.error('Error fetching country data:', error);
+                countrydata = "";
+    }
+   return countrydata;
+}
+
   static calculatePopularity(blog) {
     const currentTime = new Date();
     const blogDate = new Date(blog.createdAt);
@@ -211,61 +312,94 @@ class BlogController {
       ? 1
       : 1 / Math.log(timeDifference + 1);
 
-    return (blog.likes || 0) * likeWeight +
-           (blog.dislikes || 0) * dislikeWeight * timeWeight;
+    return (blog.likes.length || 0) * likeWeight +
+           (blog.dislikes.length || 0) * dislikeWeight * timeWeight;
   }
 
-  
-static async addUsernamesToBlogs(blogs) {
+  static async addUsernamesToBlogs(blogs) {
   return Promise.all(blogs.map(async (blog) => {
-    // Convert to plain object if it's a Sequelize instance
     const blogData = blog.get ? blog.get({ plain: true }) : blog;
-    
+    // 0 non / 1 like / 2 dislike
+       
+    var likestatus = 0
+    if (blogData.likes && blogData.likes.includes(BlogController.requesterId)) {
+      likestatus = 1
+    }
+    else if (blogData.dislikes && blogData.dislikes.includes(BlogController.requesterId)) {
+      likestatus = 2
+    }
     const user = await usermodel.findByPk(blogData.author_id);
     return {
       ...blogData,
-      author_username: user?.username || 'Unknown'
+      author_username: user?.username || 'Unknown',
+      likestatus: likestatus
     };
   }));
 }
-    
-  
- 
+    static async handleReaction(req, res) {
 
-  static async handleReaction(req, res) {
-    const { blogId, reaction } = req.query;
-    const email = req.body.email;
-    
-    try {
-      const blog = await blogmodel.findByPk(blogId);
-      if (!blog) return res.status(404).json({ message: 'Blog not found' });
 
-      let { likes, dislikes } = blog;
+  const { blogId, reaction } = req.query;
+  // const token = req.headers['authorization']?.split(' ')[1];
+  // if (!token) return res.status(401).json({ message: 'Authorization token missing' });
 
-      if (reaction === 'like') {
-        likes += 1;
-      } else if (reaction === 'dislike') {
-        dislikes += 1;
-      } else {
-        return res.status(400).json({ message: 'Invalid reaction type' });
-      }
+  // let decoded;
+  // try {
+  //   decoded = jwt.verify(token, 'jwt'); 
+  // } catch (err) {
+  //   return res.status(401).json({ message: 'Invalid token' });
+  // }
 
-      blog.likes = likes;
-      blog.dislikes = dislikes;
+  // const userId = decoded.userId;
+  const userId = req.user.userId;
 
-      await blog.save();
+  try {
+    const blog = await blogmodel.findByPk(blogId);
+    if (!blog) return res.status(404).json({ message: 'Blog not found' });
 
-      res.status(200).json({
-        message: 'Blog reaction updated successfully',
-        likes: blog.likes,
-        dislikes: blog.dislikes
-      });
+    let likes = blog.likes || [];
+    let dislikes = blog.dislikes || [];
 
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: 'Error handling reaction' });
+    if (typeof likes === 'string') likes = JSON.parse(likes);
+    if (typeof dislikes === 'string') dislikes = JSON.parse(dislikes);
+
+const preLiked = likes.includes(userId) ? 1 : 0;
+const preDisliked = dislikes.includes(userId) ? 1 : 0;
+    console.log("preLiked", preLiked);
+    let reactionadded = 0
+    likes = likes.filter(id => id !== userId);
+    dislikes = dislikes.filter(id => id !== userId);
+
+    if (reaction === 'like' && preLiked == 0) {
+      likes.push(userId);
+      reactionadded = 1
+    } else if (reaction === 'dislike' && preDisliked == 0) {
+      dislikes.push(userId);
+      reactionadded = 1
+    } else {
+      // return res.status(400).json({ message: 'Invalid reaction type' });
     }
+    console.log("reactionadded", reactionadded);
+    blog.likes = likes;
+    blog.dislikes = dislikes;
+
+    await blog.save();
+
+    return res.status(200).json({
+      message: 'Blog reaction updated successfully',
+      likesCount: likes.length,
+      dislikesCount: dislikes.length,
+      likes: likes,
+      dislikes: dislikes,
+      reactionadded: reactionadded
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Error handling reaction' });
   }
+}
+
 
   static async getUser(authorId) {
     try {

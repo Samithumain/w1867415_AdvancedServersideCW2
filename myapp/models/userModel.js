@@ -26,8 +26,8 @@ const User = sequelize.define('User', {
       notEmpty: true
     }
   },
-  follower: {
-    type: DataTypes.TEXT, // Use TEXT for JSON-encoded array
+  followers: {
+    type: DataTypes.TEXT, 
     defaultValue: '[]',
     get() {
       const raw = this.getDataValue('followers');

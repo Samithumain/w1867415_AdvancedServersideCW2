@@ -13,6 +13,84 @@
   }
 }
 
+
+.form-container {
+  min-height: 100vh;
+  background: linear-gradient(to right, #f0f4ff, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.form-box {
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 1rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.form-title {
+  text-align: center;
+  font-size: 1.75rem;
+  font-weight: bold;
+  color: #1a3f76;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333333;
+  font-weight: 500;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #cccccc;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: border 0.2s ease;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: #1a73e8;
+  outline: none;
+}
+
+.form-input-file {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.form-button {
+  width: 100%;
+  background-color: #1a73e8;
+  color: #ffffff;
+  font-weight: bold;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.form-button:hover {
+  background-color: #155ab6;
+}
+
+
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
@@ -22,6 +100,167 @@
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
+}
+.blog-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+  font-family: sans-serif;
+}
+
+.author-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.author-header h1 {
+  font-size: 2rem;
+  color: #1a3f76;
+}
+
+.follow-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #1a73e8;
+  background-color: #ffffff;
+  color: #1a73e8;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.follow-btn:hover {
+  background-color: #e8f0fe;
+}
+
+.following {
+  background-color: #1a73e8;
+  color: #ffffff;
+}
+
+.filter-section {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;   /* horizontally centers the children */
+
+  margin-bottom: 1.5rem;
+}
+
+.filter-section select {
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+}
+
+.author-blogs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.blog-card {
+  border: 1px solid #e2e8f0;
+  padding: 1.25rem;
+  border-radius: 10px;
+  margin: 10px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.blog-card h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.blog-meta {
+  font-size: 0.85rem;
+  color: #555;
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.reaction-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.navbar {
+  background-color: #2c3e50;
+  padding: 10px 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.nav-container {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  margin: auto;
+  flex-wrap: nowrap;
+}
+.nav-logo {
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links li a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav-links li a:hover {
+  color: #1abc9c;
+}
+#root{
+  width: 100%;
+  min-height:100vh ;
+}
+.reaction-buttons button {
+  padding: 0.4rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #2982dc;
+  transition: background-color 0.2s ease-in-out;
+}
+button{
+   padding: 0.4rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #d7dce3;
+  transition: background-color 0.2s ease-in-out;
+}
+.reaction-buttons button:hover:not(.disabled) {
+  background-color: #dbeafe;
+}
+
+.reaction-buttons .active { 
+  background-color: #1e40af;
+  color: white;
+}
+
+.reaction-buttons .disabled {
+  /* cursor: not-allowed; */
+  background-color: #205b97;
 }
 
 .App-link {
@@ -59,7 +298,7 @@
   padding: 8px;
   box-sizing: border-box;
 }
-
+/* 
 button {
   background-color: #4CAF50;
   color: white;
@@ -71,6 +310,27 @@ button {
 
 button:hover {
   background-color: #45a049;
+} */
+.logout-button {
+  background-color: transparent;
+  /* border: 5px solid ; */
+  color: #007bff;
+  cursor: pointer;
+  padding: 0px;
+  font-size: 1rem;
+}
+
+body {
+  background: linear-gradient(to right, #666ca5, #f77220);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  width: 100%;
+height: 100%;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.2);
 }
 
 .auth-links {

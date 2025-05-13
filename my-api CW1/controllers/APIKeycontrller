@@ -1,0 +1,75 @@
+const crypto = require('crypto');
+const ApiKey = require('../models/apiKeyModel');
+const User = require('../models/userModel');
+
+
+class APIkeyController {
+    static async generateApiKey(req, res) {
+      const { email } = req.body;
+      const userId = req.user.userId;
+
+      try {
+        // const apikey1 = await APIkeyController.ChekApiKeyForUser(userId)
+
+        // if (apikey1.status == 'success') {
+        //  res.status(200).json({ message: 'API key already exists', apiKey: apikey1.apiKey });
+        //   return;
+
+        // }
+        const apiKey = crypto.randomBytes(32).toString('hex'); 
+  
+        const newApiKey = await ApiKey.create({
+          userId: userId,
+          apiKey: apiKey,
+        });
+  
+        res.status(200).json({ message: 'API key generated successfully', apiKey: newApiKey.apiKey });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Something went wrong while generating the API key' });
+      }
+    }
+  
+    // static async revokeApiKey(req, res) {
+    //   const { apiKey } = req.body;
+  
+    //   try {
+    //     const key = await ApiKey.findOne({ where: { apiKey } });
+  
+    //     if (!key) {
+    //       return res.status(404).json({ error: 'API key not found' });
+    //     }
+  
+    //     await ApiKey.destroy({ where: { apiKey } });
+  
+    //     res.status(200).json({ message: 'API key revoked successfully' });
+    //   } catch (error) {
+    //     console.error(error);
+    //     res.status(500).json({ error: 'Something went wrong' });
+    //   }
+    // }
+
+    static async ChekApiKeyForUser(userId) {
+        if (!userId) {
+            console.log('User ID is missing');
+          return { status: 'error', message: 'User ID is missing' };
+        }
+      
+        try {
+          const userApiKey = await ApiKey.findOne({ where: { userId: userId } });
+      
+          if (!userApiKey) {
+            console.log('No API key found for this user');
+            return { status: 'error', message: 'No API key found for this user' };
+          }
+          console.log('API key found for this user:', userApiKey.apiKey);
+          return { status: 'success', apiKey: userApiKey.apiKey };
+        } catch (error) {
+            console.log('An error occurred while retrieving the API key:', error);
+          return { status: 'error', message: 'An error occurred while retrieving the API key' };
+        }
+      }
+
+
+  }
+module.exports = APIkeyController;

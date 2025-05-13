@@ -1,33 +1,14 @@
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
-const blogmodel = require('../models/blogPostModel'); // adjust as needed
+const blogmodel = require('../models/blogPostModel');
 const usermodel = require('../models/userModel');
 const BlogController = require('../controlllers/blogController');
+const Sequelize = require('../config/db');
 
-
+authormodel = require('../models/autherModel');
 
 class authorController {
-  static async addUsernamesToBlogs(blogs) {
-    const blogIds = blogs.map(blog => blog.id);
-    const users = await usermodel.findAll({
-      where: {
-        id: {
-          [Op.in]: blogs.map(blog => blog.author_id)
-        }
-      }
-    });
-
-    const userMap = {};
-    users.forEach(user => {
-      userMap[user.id] = user.username;
-    });
-
-    return blogs.map(blog => ({
-      ...blog,
-      author_username: userMap[blog.author_id] || 'Unknown'
-    }));
-  }
-
+  
 
   static async fetchUserBlogs(req, res) {
     const { authorID, email } = req.query;
@@ -36,20 +17,10 @@ class authorController {
     try {
       if (!authorID) return res.status(400).json({ message: 'Author ID is required' });
   
-      // Decode JWT from headers
-      let token = req.headers['authorization']?.split(' ')[1];
-      if (!token) return res.status(401).json({ message: 'Authorization token missing' });
+ 
   
-      let decoded;
-      try {
-        decoded = jwt.verify(token, 'jwt'); // Replace 'jwt' with process.env.JWT_SECRET in production
-      } catch (err) {
-        return res.status(401).json({ message: 'Invalid token' });
-      }
+      const requesterId = req.user.userId;
   
-      const requesterId = decoded.userId;
-  
-      // Fetch blogs by author
       const mostRecent = await blogmodel.findAll({
         where: { author_id: authorID },
         order: [['createdAt', 'DESC']],
@@ -58,7 +29,7 @@ class authorController {
   
       const mostLiked = await blogmodel.findAll({
         where: { author_id: authorID },
-        order: [['likes', 'DESC']],
+        order: [[Sequelize.literal('json_array_length(likes)'), 'DESC']],
         limit: safeLimit
       });
   
@@ -66,17 +37,15 @@ class authorController {
         where: {
           author_id: authorID,
           createdAt: {
-            [require('sequelize').Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+            [require('sequelize').Op.gte]: new Date(Date.now() - 360 * 24 * 60 * 60 * 1000)
           }
         },
-        order: [['likes', 'DESC']],
+        order: [[Sequelize.literal('json_array_length(likes)'), 'DESC']],
         limit: 100
       });
   
-      // Add author usernames
-      const processedRecent = await authorController.addUsernamesToBlogs(mostRecent);
-      const processedLiked = await authorController.addUsernamesToBlogs(mostLiked);
-      const processedPopular = await authorController.addUsernamesToBlogs(
+     
+      const processedPopular =(
         potentialPopular
           .map(blog => ({
             ...blog.get({ plain: true }),
@@ -86,30 +55,24 @@ class authorController {
           .slice(0, safeLimit)
       );
   
-      // Check if current user follows the author
       const user = await usermodel.findByPk(authorID);
       let isFollowing = false;
       let following = 0 
   
-      if (user && user.followers) {
-        try {
-          const followers = JSON.parse(user.followers);
-          isFollowing = followers.includes(requesterId);
-          if (isFollowing) {
-            following  = 1
-        }
-        } catch (err) {
-          console.error("Error parsing followers:", err);
-        }
+      if (user && user.followers.includes(requesterId)) {
+            following  =1
+
+        
       }
-  
-      // Add isFollowing to each blog
-    //   const enrich = blogs => blogs.map(blog => ({ ...blog, isFollowing }));
-  
+      
+     const mostRecent2 = await BlogController.addUsernamesToBlogs(mostRecent);
+     const mostLiked2 = await BlogController.addUsernamesToBlogs(mostLiked);
+     const processedPopular2 = await BlogController.addUsernamesToBlogs(processedPopular);
+      console.log(processedPopular)
       res.status(200).json({
-        mostRecent: (processedRecent),
-        mostLiked: (processedLiked),
-        mostPopular: (processedPopular),
+        mostRecent: (mostRecent2),
+        mostLiked: (mostLiked2),
+        mostPopular: (processedPopular2),
         isFollowing: following
       });
   
@@ -137,7 +100,60 @@ class authorController {
         console.error(err);
         res.status(500).json({ message: 'Error fetching user details' });
         }
-    }  
+    }
+
+  static  followAuthor = async (req, res) => {
+  const { followerId, authorId } = req.body;
+
+  try {
+    const author = await usermodel.findByPk(authorId);
+
+    if (!author) {
+      return res.status(404).json({ message: 'Author not found' });
+    }
+
+    if (author.followers && author.followers.includes(followerId)) {
+      return res.status(200).json({ message: 'Already following this author' });
+    }
+
+    author.followers = [...author.followers, followerId];
+    
+    await author.save();
+
+    return res.status(200).json({ message: 'Successfully followed the author' });
+  } catch (error) {
+    console.error('Error following author:', error);
+    return res.status(500).json({ message: 'Failed to follow author' });
+  }
+};
+
+
+  static unfollowAuthor = async (req, res) => {
+  const { followerId, authorId } = req.body;
+
+  try {
+    const author = await usermodel.findByPk(authorId);
+
+    if (!author) {
+      return res.status(404).json({ message: 'Author not found' });
+    }
+
+    if (!author.followers || !author.followers.includes(followerId)) {
+      return res.status(400).json({ message: 'Not following this author' });
+    }
+
+    author.followers = author.followers.filter(id => id !== followerId);
+    
+    await author.save();
+
+    return res.status(200).json({ message: 'Successfully unfollowed the author' });
+  } catch (error) {
+    console.error('Error unfollowing author:', error);
+    return res.status(500).json({ message: 'Failed to unfollow author' });
+  }
+};
+
+
 }
 
 module.exports = authorController;

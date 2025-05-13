@@ -35,7 +35,7 @@ class UserController {
         password
       });
   
-      const token = jwt.sign({ userId: newUser.id, email: email}, 'jwt', {
+      const token = jwt.sign({ userId: newUser.id, email: email}, process.env.JWT_SECRET, {
         expiresIn: '1h'
       });
       res.status(201).json({ message: 'User created successfully', user: newUser, token:token });
@@ -52,7 +52,7 @@ class UserController {
       const user = await User.findOne({ where: { email } });
 
       if (!user) {
-        return res.status(400).json({ error: 'Invalid credentials' });
+        return res.status(400).json({ error: 'Invalid email' });
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
@@ -61,7 +61,7 @@ class UserController {
         return res.status(400).json({ error: 'Invalid credentials' });
       }
 
-      const token = jwt.sign({ userId: user.id, email: email}, 'jwt', {
+      const token = jwt.sign({ userId: user.id, email: email},process.env.JWT_SECRET, {
         expiresIn: '1h'
       });
   
@@ -71,20 +71,7 @@ class UserController {
       res.status(500).json({ error: 'Something went wrong' });
     }
   }
-  static async adminvalidate(req, res) {
-    // return res.status(200).json({ message: 'Admin access granted' });
-
-    const {email, password } = req.body;
-    if (email === process.env.RESTRICTED_EMAIL && password === process.env.pw) {
-        return res.status(200).json({ message: 'Admin access granted' });
-    }
-    else{
-        return res.status(401).json({ message: 'Invalid Credentials' });
-
-    }
-
-
-  }
+  
 }
 
 module.exports = UserController;

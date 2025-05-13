@@ -1,0 +1,43 @@
+version: '3'
+services:
+  backend:
+    build:
+      context: ./myapp
+    container_name: node_backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./myapp/database.sqlite:/app/database.sqlite:rw 
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./react app 
+    container_name: react_frontend
+    volumes:
+      - ./react app:/app  
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    tty: true
+    networks:
+      - app-network
+
+  microservice:
+    build:
+      context: ./my-api CW1
+    container_name: my_microservice
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

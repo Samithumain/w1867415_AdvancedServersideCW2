@@ -5,6 +5,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const cors = require('cors');
 
+const multer = require('./middlewares/multer');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -22,6 +23,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type','Authorization'],
 }));
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 app.set('views', path.join(__dirname, 'views'));

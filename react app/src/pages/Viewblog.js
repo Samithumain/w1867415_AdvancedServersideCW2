@@ -43,8 +43,9 @@ const ViewBlog = () => {
           });
           
           const data = await res.json();
-          // Save each category of blogs separately
           setBlogs(data); 
+          if (country) {
+          }
       } catch (e) {
         console.error('Error loading blogs:', e);
       } finally {
@@ -60,18 +61,23 @@ const ViewBlog = () => {
 
     e.preventDefault();
     
-    // 1. Your custom logic here
     console.log(`Author clicked - ID: ${authorId}, Username: ${username}`);
     
-    // 2. Example: Track analytics
     
-    // 3. Navigate to author page
-    navigate(`/authors/${authorId}`);
+    navigate(`/authors/${authorId}/${username}`);
   };
 
   const handleReaction = async (blogId, reaction) => {
+    let isliked = 0;
+    // window.alert(reaction)
+    if (reaction === 'like') {
+      isliked = 1;
+    }
+    else {
+      isliked = 2;
+    }
+
     if (!user) return;
-    window.alert("blogid: " + blogId);
     try {
       const response = await fetch(`http://localhost:5000/api/blog/reaction?blogId=${blogId}&reaction=${reaction}`, {
         method: 'POST',
@@ -83,7 +89,11 @@ const ViewBlog = () => {
           email: user.email,
         }),
       });
-
+const data = await response.json();
+ if (data.reactionadded == 0){
+  isliked = 0 
+  // window.alert(isliked)
+ }
       setBlogs((prevBlogs) => {
         const updatedBlogs = { ...prevBlogs };
       
@@ -94,11 +104,17 @@ const ViewBlog = () => {
       
         updatedBlogs[listKey] = updatedBlogs[listKey].map(blog => {
           if (blog.id === blogId) {
+          //  window.alert(data.likes)
+          //  window.alert(data.dislikes)      
+          //  window.alert(blog.dislikes.length + 1)
+          //  window.alert(blog.dislikes.length)
             return {
+              
               ...blog,
               userReaction: reaction,
-              likes: reaction === 'like' ? blog.likes + 1 : blog.likes,
-              dislikes: reaction === 'dislike' ? blog.dislikes + 1 : blog.dislikes,
+            likes:data.likes,
+              dislikes: data.dislikes,
+              likestatus:isliked,
             };
           }
           return blog;
@@ -142,23 +158,80 @@ const ViewBlog = () => {
           ))}
         </select>
 
-        <input
-          type="text"
-          placeholder="Search blogs..."
-          value={filters.searchQuery}
-          onChange={(e) => setFilters({...filters, searchQuery: e.target.value})}
-        />
+
+<input
+class = "search-input"
+  type="text"
+  placeholder="Search blogs..."
+  value={filters.searchQuery}
+  onChange={(e) =>
+    setFilters({ ...filters, searchQuery: e.target.value })
+  }
+  onKeyDown={(e) => {
+    if (e.key === 'Enter') {
+    }
+  }}
+/>
+
       </div>
 
       {loading ? (
         <p>Loading blogs...</p>
       ) : (
+
+
+
+
+        
         <div className="blog-list">
-          {/* Render the blogs based on the filter type */}
+
+
+
+
+
+{blogs.countrydata && Object.keys(blogs.countrydata).length > 0 ? (
+  <div style={{ padding: '20px', backgroundColor: '#f4f4f4', borderRadius: '8px', maxWidth: '400px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
+    {blogs.countrydata.flag ? (
+      <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+        <img
+          src={blogs.countrydata.flag}
+          alt={`${blogs.countrydata.name || 'Country'} flag`}
+          style={{ width: '120px', height: 'auto', borderRadius: '4px' }}
+        />
+      </div>
+    ) : null}
+
+    {blogs.countrydata.currency && typeof blogs.countrydata.currency === 'object' ? (
+      <p>
+        <strong>Currency:</strong>{' '}
+        {Object.values(blogs.countrydata.currency)
+          .map((curr) => `${curr?.name || 'Unknown'} (${curr?.symbol || '-'})`)
+          .join(', ')}
+      </p>
+    ) : null}
+
+    {blogs.countrydata.languages && typeof blogs.countrydata.languages === 'object' && Object.keys(blogs.countrydata.languages).length > 0 ? (
+      <p>
+        <strong>Languages:</strong>{' '}
+        {Object.values(blogs.countrydata.languages).join(', ')}
+      </p>
+    ) : null}
+
+    {blogs.countrydata.capital && blogs.countrydata.capital.length > 0 ? (
+      <p style={{ marginTop: '15px' }}>
+        <strong>Capital:</strong> {blogs.countrydata.capital[0] || 'N/A'}
+      </p>
+    ) : null}
+  </div>
+) : (
+  <p style={{ textAlign: 'center', color: 'gray' }}></p>
+)}
+
+
+
           {filters.sortBy === 'recent' && blogs.mostRecent.map(blog => (
             <div key={blog.id} className="blog-card">
               <h3>{blog.title}</h3>
-              {/* <p>{blog.author_username}</p> */}
       
               <p>
   Posted by: {' '}
@@ -177,20 +250,22 @@ const ViewBlog = () => {
                 <span>📍 {blog.country}</span>
                 <span>🗓 {format(new Date(blog.visit_date), 'MMMM yyyy')}</span>
               </div>
-              <p>{blog.content.substring(0, 200)}...</p>
+              <p>{blog.content}</p>
             
               <div className="reaction-buttons">
                 <button
                   onClick={() => handleReaction(blog.id, 'like')}
-                  className={blog.userReaction === 'like' ? 'active' : ''}
-                >
-                  👍 {blog.likes || 0}
+ className={`${
+                blog.userReaction === 'like' ? 'active' : ''
+              } ${blog.likestatus === 1 ? 'disabled' : 'enabled'}`}                  >
+                  👍 {blog.likes.length || 0}
                 </button>
                 <button
                   onClick={() => handleReaction(blog.id, 'dislike')}
-                  className={blog.userReaction === 'dislike' ? 'active' : ''}
-                >
-                  👎 {blog.dislikes || 0}
+        className={`${
+                blog.userReaction === 'dislike' ? 'active' : ''
+              } ${blog.likestatus === 2 ? 'disabled' : ''}`}                >
+                  👎 {blog.dislikes.length || 0}
                 </button>
               </div>
             </div>
@@ -217,20 +292,22 @@ const ViewBlog = () => {
                 <span>📍 {blog.country}</span>
                 <span>🗓 {format(new Date(blog.visit_date), 'MMMM yyyy')}</span>
               </div>
-              <p>{blog.content.substring(0, 200)}...</p>
+              <p>{blog.content}</p>
 
               <div className="reaction-buttons">
                 <button
                   onClick={() => handleReaction(blog.id, 'like')}
-                  className={blog.userReaction === 'like' ? 'active' : ''}
-                >
-                  👍 {blog.likes || 0}
+        className={`${
+                blog.userReaction === 'like' ? 'active' : ''
+              } ${blog.likestatus === 1 ? 'disabled' : 'enabled'}`}                >
+                  👍 {blog.likes.length || 0}
                 </button>
                 <button
                   onClick={() => handleReaction(blog.id, 'dislike')}
-                  className={blog.userReaction === 'dislike' ? 'active' : ''}
-                >
-                  👎 {blog.dislikes || 0}
+        className={`${
+                blog.userReaction === 'dislike' ? 'active' : ''
+              } ${blog.likestatus === 2 ? 'disabled' : 'enabled'}`}                >
+                  👎 {blog.dislikes.length || 0}
                 </button>
               </div>
             </div>
@@ -258,20 +335,24 @@ const ViewBlog = () => {
                 <span>📍 {blog.country}</span>
                 <span>🗓 {format(new Date(blog.visit_date), 'MMMM yyyy')}</span>
               </div>
-              <p>{blog.content.substring(0, 200)}...</p>
+              <p>{blog.content}</p>
 
               <div className="reaction-buttons">
                 <button
                   onClick={() => handleReaction(blog.id, 'like')}
-                  className={blog.userReaction === 'like' ? 'active' : ''}
+                         className={`${
+                blog.userReaction === 'like' ? 'active' : ''
+              } ${blog.likestatus === 1 ? 'disabled' : 'enabled'}`}
                 >
-                  👍 {blog.likes || 0}
+                  👍 {blog.likes.length || 0}
                 </button>
                 <button
                   onClick={() => handleReaction(blog.id, 'dislike')}
-                  className={blog.userReaction === 'dislike' ? 'active' : ''}
+                         className={`${
+                blog.userReaction === 'dislike' ? 'active' : ''
+              } ${blog.likestatus === 2 ? 'disabled' : 'enabled'}`}
                 >
-                  👎 {blog.dislikes || 0}
+                  👎 {blog.dislikes.length || 0}
                 </button>
               </div>
             </div>
@@ -279,7 +360,6 @@ const ViewBlog = () => {
 
 
 
-          {/* Similarly render for other filters like mostLiked */}
         </div>
       )}
     </div>
