@@ -1,6 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
-my-api CW1/node_modules/ export-ignore
-myapp/node_modules/ export-ignore
-react app/node_modules/ export-ignore
+"my-api CW1/node_modules/" export-ignore
+"myapp/node_modules/" export-ignore
+"react app/node_modules/" export-ignore
