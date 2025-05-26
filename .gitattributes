@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+my-api CW1/node_modules
+myapp/node_modules
+react app/node_modules
